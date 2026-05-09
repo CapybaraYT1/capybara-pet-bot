@@ -3,7 +3,8 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 def main_menu():
     return ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="👤 Профиль"), KeyboardButton(text="🎟 Рефералы")],
-        [KeyboardButton(text="👥 Кланы")]
+        [KeyboardButton(text="👥 Кланы"), KeyboardButton(text="💼 Работа")],
+        [KeyboardButton(text="🏆 Лидеры"), KeyboardButton(text="💎 Купить монеты")]
     ], resize_keyboard=True)
 
 def back_button():
@@ -13,7 +14,7 @@ def back_button():
 
 def profile_inline(user_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✏️ Переименовать капибару", callback_data=f"rename_capy")],
+        [InlineKeyboardButton(text="✏️ Переименовать капибару", callback_data="rename_capy")],
         [InlineKeyboardButton(text="◀️ Назад", callback_data="back_main")]
     ])
 

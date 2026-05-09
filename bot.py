@@ -22,7 +22,10 @@ dp.include_router(work_shop.router)
 @dp.message()
 async def profanity_filter(message: Message):
     if message.text and contains_bad_words(message.text):
-        await message.delete()
+        try:
+            await message.delete()
+        except:
+            pass
         await message.answer("🚫 Пожалуйста, не используй нецензурные слова!")
 
 async def main():

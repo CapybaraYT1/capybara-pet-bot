@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, F, Router
 from aiogram.types import Message
 from aiogram.fsm.storage.memory import MemoryStorage
 from config import BOT_TOKEN
@@ -13,13 +13,17 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
+# Сначала все основные роутеры
 dp.include_router(start.router)
 dp.include_router(profile.router)
 dp.include_router(referrals.router)
 dp.include_router(clans.router)
 dp.include_router(work_shop.router)
 
-@dp.message()
+# Фильтр мата — последним, чтобы не перехватывал команды
+profanity_router = Router()
+
+@profanity_router.message()
 async def profanity_filter(message: Message):
     if message.text and contains_bad_words(message.text):
         try:
@@ -27,6 +31,8 @@ async def profanity_filter(message: Message):
         except:
             pass
         await message.answer("🚫 Пожалуйста, не используй нецензурные слова!")
+
+dp.include_router(profanity_router)
 
 async def main():
     init_db()

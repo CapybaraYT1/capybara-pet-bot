@@ -17,7 +17,7 @@ dp.include_router(referrals.router)
 dp.include_router(clans.router)
 
 async def main():
-    await init_db()
+    init_db()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

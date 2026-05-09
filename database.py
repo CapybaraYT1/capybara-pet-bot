@@ -18,7 +18,10 @@ def init_db():
             referred_by BIGINT DEFAULT NULL,
             clan_id INTEGER DEFAULT NULL,
             clan_role TEXT DEFAULT NULL,
-            created_at TIMESTAMP DEFAULT NOW()
+            created_at TIMESTAMP DEFAULT NOW(),
+            work_started_at TIMESTAMP DEFAULT NULL,
+            last_collected_at TIMESTAMP DEFAULT NULL,
+            is_working BOOLEAN DEFAULT FALSE
         );
         CREATE TABLE IF NOT EXISTS clans (
             id SERIAL PRIMARY KEY,
@@ -35,6 +38,14 @@ def init_db():
             created_at TIMESTAMP DEFAULT NOW()
         );
     """)
+    # Add work columns if they don't exist (for existing tables)
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS work_started_at TIMESTAMP DEFAULT NULL")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_collected_at TIMESTAMP DEFAULT NULL")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_working BOOLEAN DEFAULT FALSE")
+        conn.commit()
+    except:
+        conn.rollback()
     conn.commit()
     cur.close()
     conn.close()
@@ -73,6 +84,92 @@ def update_capybara_name(user_id, new_name):
     cur.close()
     conn.close()
 
+def add_coins(user_id, amount):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET coins = coins + %s WHERE user_id = %s", (amount, user_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+# ─── РАБОТА ─────────────────────────────────────────────────
+def start_work(user_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE users SET is_working = TRUE, work_started_at = NOW(), last_collected_at = NOW()
+        WHERE user_id = %s
+    """, (user_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def collect_work(user_id):
+    """Собирает заработанные монеты. Возвращает количество монет или 0."""
+    import random
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+    user = cur.fetchone()
+
+    if not user or not user['is_working']:
+        cur.close()
+        conn.close()
+        return 0, 0
+
+    from datetime import datetime
+    last = user['last_collected_at']
+    if last is None:
+        last = user['work_started_at']
+
+    now = datetime.now()
+    diff_minutes = (now - last).total_seconds() / 60
+
+    periods = int(diff_minutes / 30)
+    if periods <= 0:
+        cur.close()
+        conn.close()
+        minutes_left = int(30 - diff_minutes)
+        return 0, minutes_left
+
+    earned = sum(random.randint(50, 150) for _ in range(periods))
+
+    cur2 = conn.cursor()
+    cur2.execute("""
+        UPDATE users SET coins = coins + %s, last_collected_at = NOW()
+        WHERE user_id = %s
+    """, (earned, user_id))
+    conn.commit()
+    cur.close()
+    cur2.close()
+    conn.close()
+    return earned, 0
+
+def stop_work(user_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE users SET is_working = FALSE, work_started_at = NULL, last_collected_at = NULL
+        WHERE user_id = %s
+    """, (user_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+# ─── ТОП ИГРОКОВ ────────────────────────────────────────────
+def get_top_users(limit=15):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT username, capybara_name, coins FROM users
+        ORDER BY coins DESC LIMIT %s
+    """, (limit,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+# ─── КЛАНЫ ──────────────────────────────────────────────────
 def get_clan(clan_id):
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)

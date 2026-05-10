@@ -16,19 +16,23 @@ def work_keyboard():
 def shop_keyboard():
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⭐ 1 звезда → 100 монет", callback_data="buy_1")],
-        [InlineKeyboardButton(text="⭐ 10 звёзд → 1 200 монет", callback_data="buy_10")],
-        [InlineKeyboardButton(text="⭐ 25 звёзд → 3 000 монет", callback_data="buy_25")],
-        [InlineKeyboardButton(text="⭐ 100 звёзд → 13 500 монет", callback_data="buy_100")],
-        [InlineKeyboardButton(text="⭐ 1000 звёзд → 175 000 монет", callback_data="buy_1000")],
+        [InlineKeyboardButton(text="⭐ 1 звезда → 200 монет", callback_data="buy_1")],
+        [InlineKeyboardButton(text="⭐ 10 звёзд → 2 100 монет", callback_data="buy_10")],
+        [InlineKeyboardButton(text="⭐ 25 звёзд → 5 500 монет", callback_data="buy_25")],
+        [InlineKeyboardButton(text="⭐ 50 звёзд → 11 500 монет", callback_data="buy_50")],
+        [InlineKeyboardButton(text="⭐ 100 звёзд → 24 000 монет", callback_data="buy_100")],
+        [InlineKeyboardButton(text="⭐ 500 звёзд → 130 000 монет", callback_data="buy_500")],
+        [InlineKeyboardButton(text="⭐ 1000 звёзд → 270 000 монет", callback_data="buy_1000")],
     ])
 
 SHOP_PACKAGES = {
-    "buy_1":    (1,    100),
-    "buy_10":   (10,   1200),
-    "buy_25":   (25,   3000),
-    "buy_100":  (100,  13500),
-    "buy_1000": (1000, 175000),
+    "buy_1":    (1,    200),
+    "buy_10":   (10,   2100),
+    "buy_25":   (25,   5500),
+    "buy_50":   (50,   11500),
+    "buy_100":  (100,  24000),
+    "buy_500":  (500,  130000),
+    "buy_1000": (1000, 270000),
 }
 
 @router.message(F.text == "💼 Работа")
@@ -122,6 +126,17 @@ async def top_battles(callback: CallbackQuery):
     await callback.message.answer(text, parse_mode="HTML")
     await callback.answer()
 
+@router.callback_query(F.data == "top_stars")
+async def top_stars(callback: CallbackQuery):
+    top = db.get_top_users_stars(10)
+    medals = ["🥇", "🥈", "🥉"]
+    text = "⭐ <b>Топ по звёздам</b>\n" + "─" * 20 + "\n\n"
+    for i, u in enumerate(top):
+        medal = medals[i] if i < 3 else f"{i+1}."
+        text += f"{medal} <b>{u['capybara_name']}</b> — {u['stars_spent']} ⭐\n"
+    await callback.message.answer(text, parse_mode="HTML")
+    await callback.answer()
+
 # ─── МАГАЗИН ─────────────────────────────────────────────────
 @router.message(F.text == "💎 Купить монеты")
 async def shop_menu(message: Message):
@@ -144,7 +159,7 @@ async def buy_package(callback: CallbackQuery):
     await callback.message.answer_invoice(
         title=f"💰 {coins} монет",
         description=f"Покупка {coins} монет для Capybara Pet",
-        payload=f"coins_{coins}",
+        payload=f"coins_{coins}_{stars}",
         currency="XTR",
         prices=[LabeledPrice(label=f"{coins} монет", amount=stars)],
     )
@@ -156,6 +171,14 @@ async def pre_checkout(query: PreCheckoutQuery):
 
 @router.message(F.successful_payment)
 async def successful_payment(message: Message):
-    coins = int(message.successful_payment.invoice_payload.split("_")[1])
+    parts = message.successful_payment.invoice_payload.split("_")
+    coins = int(parts[1])
+    stars = int(parts[2])
     db.add_coins(message.from_user.id, coins)
-    await message.answer(f"✅ Оплата прошла!\n💰 Зачислено <b>{coins} монет</b>!", parse_mode="HTML")
+    db.add_stars(message.from_user.id, stars)
+    await message.answer(
+        f"✅ Оплата прошла!\n"
+        f"💰 Зачислено <b>{coins} монет</b>!\n"
+        f"⭐ Потрачено звёзд: <b>{stars}</b>",
+        parse_mode="HTML"
+    )

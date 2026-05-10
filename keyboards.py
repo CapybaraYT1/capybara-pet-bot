@@ -53,8 +53,8 @@ def confirm_inline(action):
 
 def cases_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⚔️ Кейс оружия — 1000 монет", callback_data="case_weapon")],
-        [InlineKeyboardButton(text="🛡 Кейс брони — 1000 монет", callback_data="case_armor")],
+        [InlineKeyboardButton(text="⚔️ Кейс оружия — 800 монет", callback_data="case_weapon")],
+        [InlineKeyboardButton(text="🛡 Кейс брони — 800 монет", callback_data="case_armor")],
     ])
 
 def confirm_case(case_type):
@@ -74,6 +74,7 @@ def leaderboard_menu():
         [InlineKeyboardButton(text="💰 По монетам", callback_data="top_coins")],
         [InlineKeyboardButton(text="🎟 По рефералам", callback_data="top_referrals")],
         [InlineKeyboardButton(text="⚔️ По победам", callback_data="top_battles")],
+        [InlineKeyboardButton(text="⭐ По звёздам", callback_data="top_stars")],
     ])
 
 def inventory_equip(item_id, item_type):
